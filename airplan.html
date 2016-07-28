@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<title>飞机大战</title>
+		<style type="text/css">
+			* {
+				margin: 0;
+				padding: 0;
+			}			
+			body {
+				text-align: center;
+				position: relative;
+			}
+			#box{
+				width: 240px;
+				height: 140px;
+				border: 2px solid rgb(94,98,98);
+				background: rgb(204,204,204);
+				border-radius: 10px;
+				display: none;
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				margin-left: -120px;
+				padding-top: 10px;
+				margin-top: -70px;
+			}
+			.restart,.submitScore,#continue{
+				width: 80px;
+				height: 30px;
+				border: 2px solid rgb(94,98,98);
+				border-radius: 5px;
+				color: rgb(94,98,98);
+				margin: 20px auto;
+				line-height: 30px;
+			}
+			span{
+				color: rgb(94,98,98);
+				font-size: 25px;
+			}
+			#reS{
+				width: 240px;
+				height: 200px;
+				border: 2px solid rgb(94,98,98);
+				background: rgb(204,204,204);
+				border-radius: 10px;
+				display: none;
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				margin-left: -120px;
+				padding-top: 10px;
+				margin-top: -100px;
+			}
+		</style>
+	</head>
+
+	<body>
+		<canvas id="canvas"></canvas>
+		<div id="box">
+			<span>成绩：</span><span id="score">0</span>
+			<div id="restart" class="restart">重新开始</div>
+			<div id="submitScore" class="submitScore">提交分数</div>
+		</div>
+		<div id="reS">
+			<div id="continue">继续</div>
+			<div id="restart" class="restart">重新开始</div>
+			<div id="submitScore" class="submitScore">提交分数</div>
+		</div>
+	</body>
+	<script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+	<script type="text/javascript" src="js/lxlready.js"></script>
+	<script type="text/javascript" src="js/lxlbackground.js"></script>
+	<script src="js/xccAirplane.js" type="text/javascript" charset="utf-8"></script>
+	<script src="js/ykkeyboard.js" type="text/javascript" charset="utf-8"></script>
+	<script src="js/xccEnemy.js" type="text/javascript" charset="utf-8"></script>
+	<script src="js/lxlbullet.js" type="text/javascript" charset="utf-8"></script>
+	<script src="js/lxlsupply.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript">
+		var nimei = new Background();
+		var score = new Score();
+		var bomb = new Bomb();
+		var bombNum = 00;
+		var scoreNum = 0;
+		//建立主机
+		var Ykplane = new airplaneFun((canvas.width - PLANEWIDTH) / 2, canvas.height - PLANEHEIGHT);
+		controlYk(Ykplane);
+		Ykplane.drawPlane();
+
+		//建立敌人
+		var enemyArray = [];
+
+		function enemyConstruct() {
+			var i = 0;
+			setInterval(function() {
+				i++;
+			var enemies = new enemyFun((canvas.width - 100) * Math.random(), -200, Math.ceil(3 * Math.random()), Math.ceil(2 * Math.random()));
+				enemyArray.push(enemies);
+			}, 1400)
+		}
+		enemyConstruct();
+
+		//建立子弹
+		var bulletArray = [];
+		var createSpeed = 200;
+		function bulletConstruct(x, y, type, speed) {
+			var bullets = new BulletModel(x, y, type, speed);
+			bulletArray.push(bullets);
+		}
+		//定时器留在外面就是为了不断获取飞机现坐标
+		setInterval(function() {
+			bulletConstruct(Ykplane.x + (PLANEWIDTH - bulletWidthTwo) / 2, Ykplane.y + 16, 2, 4);
+		}, createSpeed);
+		
+		//创建补给品
+		var supplyArray = [];
+		function supplyConstruct(x, y, type, speed) {
+				var supplys = new supplyModel(x, y, type, speed);
+				supplyArray.push(supplys);
+		}
+		setInterval(function(){
+			supplyConstruct((canvas.width - supplyWidth) * Math.random(), -supplyHeight, Math.ceil(3 * Math.random()), 4 * Math.random());
+		},10000);
+		
+		
+		//主控定时器
+		function main(){
+			var mianControl = setInterval(function() {
+				//清屏
+				context.clearRect(0, 0, canvas.width, canvas.height);
+				nimei.backgroundMove(2);
+	
+				Ykplane.move(2);
+				//敌人绘制
+				for(var v = 0; v < enemyArray.length; v++) {
+					enemyArray[v].enemyMove();
+					if(enemyArray[v].y > canvas.height) {
+						enemyArray.splice(enemyArray.indexOf(enemyArray[v]), 1);
+					}
+				}
+				//子弹绘制
+				for(var v = 0; v < bulletArray.length; v++) {
+					bulletArray[v].bulletMove();
+					if(bulletArray[v].y < -1 * bulletArray[v].height) {
+						bulletArray.splice(bulletArray.indexOf(bulletArray[v]), 1);
+					}
+				}
+				//补给品绘制
+				for(var v = 0; v < supplyArray.length; v++) {
+					supplyArray[v].supplyMove();
+					if(supplyArray[v].y < -1 * supplyArray[v].height) {
+						supplyArray.splice(supplyArray.indexOf(supplyArray[v]), 1);
+					}
+				}
+				//碰撞检测
+				for(var i = 0; i < enemyArray.length; i++) {
+					for(var v = 0; v < bulletArray.length; v++) {
+						var bulletX = bulletArray[v].x;
+						var bulletY = bulletArray[v].y;
+						var bulletWidth = bulletArray[v].width;
+						var bulletHeight = bulletArray[v].height;
+						var enemyX = enemyArray[i].x;
+						var enemyY = enemyArray[i].y;
+						var enemyWidth = enemyArray[i].enemyWidth;
+						var enemyHeight = enemyArray[i].enemyHeight;
+						if(bulletX < (enemyX + enemyWidth) && bulletY < (enemyY + enemyHeight) && (bulletX + bulletWidth) > enemyX && (bulletY + bulletHeight) > enemyY) {
+							bulletArray.splice(bulletArray.indexOf(bulletArray[v]), 1);
+							enemyArray[i].blood--;
+							if(enemyArray[i].blood <= 0) {
+								scoreNum += enemyArray[i].score;
+								enemyArray[i].die();
+								enemyArray.splice(enemyArray.indexOf(enemyArray[i]), 1);
+							}
+						}
+					}
+					if(Ykplane.x < (enemyX + enemyWidth) && Ykplane.y < (enemyY + enemyHeight) && (Ykplane.x + PLANEWIDTH) > enemyX && (Ykplane.y + PLANEHEIGHT) > enemyY) {
+							Ykplane.drawPlane(0);						
+							setTimeout(function(){
+								clearInterval(mianControl);
+								gameOver();
+							},800);										
+					}
+				}
+				score.drawScore(scoreNum);
+				bomb.drawBomb(bombNum);
+				var clickNum = 0;
+				//鼠标点击暂停图片
+				canvas.onclick = function(event){
+					clickNum++;
+					var ev = event || window.event;
+					var clientX = ev.clientX - this.offsetLeft;
+					var clientY = ev.clientY - this.offsetTop;
+					if (clientX < 80 && clientY < 80) {
+						if (clickNum % 2 != 0) {
+							//暂停
+							clearInterval(mianControl);
+							$("#reS").show();
+						}else{
+							$("#reS").hide();
+							main();
+						}
+					}
+				}
+			}, 10);
+		}
+		main();
+		//游戏结束
+		function gameOver(){
+			$("#box").show();
+			$("#score").html(scoreNum);
+		}
+		//游戏重新开始
+		$("#restart").on("click",function(){
+			console.log(1);
+			document.location.reload();
+		});
+		
+	</script>
+
+</html>

@@ -1,0 +1,48 @@
+body,p,html{
+	margin: 0;
+	padding: 0;
+}
+body{
+	text-align: center;
+	position: relative;
+}
+#box {
+	width: 240px;
+	height: 180px;
+	border: 2px solid rgb(94, 98, 98);
+	background: rgb(204, 204, 204);
+	border-radius: 10px;
+	display: none;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	margin-left: -120px;
+	padding-top: 10px;
+	margin-top: -90px;
+}
+.restart,.submitScore {
+	width: 80px;
+	height: 30px;
+	border: 2px solid rgb(94, 98, 98);
+	border-radius: 5px;
+	color: rgb(94, 98, 98);
+	margin: 20px auto;
+	line-height: 30px;
+}
+span{
+	color: rgb(94, 98, 98);
+	font-size: 25px;
+}
+#reS {
+	width: 240px;
+	height: 160px;
+	border: 2px solid rgb(94, 98, 98);
+	background: rgb(204, 204, 204);
+	border-radius: 10px;
+	display: none;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	margin-left: -120px;
+	margin-top: -80px;
+}

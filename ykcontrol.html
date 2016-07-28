@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<title>飞机大战firstGroup</title>
+		<link rel="stylesheet" type="text/css" href="css/index.css" />
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+		<audio src="audio/bullet.mp3" class="loopMusic"></audio>
+		<audio src="audio/game_music.mp3" autoplay="autoplay" loop="loop" class="loopMusic"></audio>
+		<audio src="audio/enemy1_down.mp3" class="enemyMusic1"></audio>
+		<audio src="audio/enemy2_down.mp3" class="enemyMusic2"></audio>
+		<audio src="audio/enemy3_down.mp3" class="enemyMusic3"></audio>
+		<div id="box">
+			<span>成绩：</span><span id="score">0</span>
+			<div id="restart" class="restart">重新开始</div>
+			<div id="submitScore" class="submitScore">提交分数</div>
+		</div>
+		<div id="reS">
+			<div id="restart" class="restart">重新开始</div>
+			<div id="submitScore" class="submitScore">提交分数</div>
+		</div>
+	</body>
+	<script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+	<script type="text/javascript" src="js/lxlready.js"></script>
+	<script type="text/javascript" src="js/lxlbackground.js"></script>
+	<script src="js/xccAirplane.js" type="text/javascript" charset="utf-8"></script>
+	<script src="js/ykkeyboard.js" type="text/javascript" charset="utf-8"></script>
+	<script src="js/xccEnemy.js" type="text/javascript" charset="utf-8"></script>
+	<script src="js/lxlbullet.js" type="text/javascript" charset="utf-8"></script>
+	<script src="js/lxlsupply.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript">
+		var nimei = new Background();
+		var score = new Score();
+		var bomb = new Bomb();
+		var scoreNum = 0;
+		var bombNum = 0;
+		//建立主机
+		var Ykplane = new airplaneFun((canvas.width - PLANEWIDTH) / 2, canvas.height - PLANEHEIGHT);
+		controlYk(Ykplane);
+		Ykplane.drawPlane();
+		//建立敌人
+		var enemyArray = [];
+		var createEnemy;
+		var createEnemySpeed = 1000;
+		function enemyConstruct() {
+			createEnemy = setInterval(function() {
+				var enemies = new enemyFun((canvas.width - 100) * Math.random(), -200, Math.ceil(3 * Math.random()), Math.ceil(2 * Math.random()));
+				enemyArray.push(enemies);
+			}, createEnemySpeed)
+		}
+		enemyConstruct();
+		//加大游戏难度，不断增加定时器速度，清除原定时器，新建定时器
+		setInterval(function(){
+			clearInterval(createEnemy);
+			if(createEnemySpeed >= 600){
+				createEnemySpeed -= 100;
+			}
+			createEnemy = setInterval(function(){
+				var enemies = new enemyFun((canvas.width - 100) * Math.random(), -200, Math.ceil(3 * Math.random()), Math.ceil(2 * Math.random()));
+					enemyArray.push(enemies);
+				}, createEnemySpeed);
+			},20000);		
+		//建立子弹
+		var bulletArray = [];
+		var createSpeed = 200;
+		var bulletType = [1, bulletWidthOne, bulletHeightOne];
+
+		function bulletConstruct(x, y, type, speed) {
+			var bullets = new BulletModel(x, y, type, speed);
+			bulletArray.push(bullets);
+		}
+		//定时器留在外面就是为了不断获取飞机现坐标;
+		var createBullet = setInterval(function() {
+			$(".loopMusic")[0].play();
+			bulletConstruct(Ykplane.x + (PLANEWIDTH - bulletType[1]) / 2, Ykplane.y - bulletType[2], bulletType[0], 4);
+		}, createSpeed);
+
+		//创建补给品
+		var supplyArray = [];
+
+		function supplyConstruct(x, y, type, speed) {
+			var supplys = new supplyModel(x, y, type, speed);
+			supplyArray.push(supplys);
+		}
+		setInterval(function() {
+			supplyConstruct((canvas.width - supplyWidth) * Math.random(), -supplyHeight, Math.floor(2 * Math.random()), 4 * Math.random());
+		}, 10000);
+
+		//主控定时器
+		//主控定时器
+		//主控定时器
+		function main() {
+			var mianControl = setInterval(function() {
+				//清屏
+				context.clearRect(0, 0, canvas.width, canvas.height);
+				nimei.backgroundMove(2);
+
+				Ykplane.move(2);
+				//敌人绘制
+				for(var v = 0; v < enemyArray.length; v++) {
+					enemyArray[v].enemyMove();
+					if(enemyArray[v].y > canvas.height) {
+						enemyArray.splice(enemyArray.indexOf(enemyArray[v]), 1);
+					}
+				}
+				//子弹绘制
+				for(var v = 0; v < bulletArray.length; v++) {
+					bulletArray[v].bulletMove();
+					if(bulletArray[v].y < -1 * bulletArray[v].height) {
+						bulletArray.splice(bulletArray.indexOf(bulletArray[v]), 1);
+					}
+				}
+				//补给品绘制
+				for(var v = 0; v < supplyArray.length; v++) {
+					supplyArray[v].supplyMove();
+					if(supplyArray[v].y < -1 * supplyArray[v].height) {
+						supplyArray.splice(supplyArray.indexOf(supplyArray[v]), 1);
+					}
+				}
+				//碰撞检测
+				//敌机、子弹、本机
+				for(var i = 0; i < enemyArray.length; i++) {
+					for(var v = 0; v < bulletArray.length; v++) {
+						var bulletX = bulletArray[v].x;
+						var bulletY = bulletArray[v].y;
+						var bulletWidth = bulletArray[v].width;
+						var bulletHeight = bulletArray[v].height;
+						var enemyX = enemyArray[i].x;
+						var enemyY = enemyArray[i].y;
+						var enemyWidth = enemyArray[i].enemyWidth;
+						var enemyHeight = enemyArray[i].enemyHeight;
+						if(bulletX < (enemyX + enemyWidth) && bulletY < (enemyY + enemyHeight) && (bulletX + bulletWidth) > enemyX && (bulletY + bulletHeight) > enemyY) {
+							bulletArray.splice(bulletArray.indexOf(bulletArray[v]), 1);
+							if(bulletArray[v].type == 1){
+								enemyArray[i].blood--;
+							}else {
+								enemyArray[i].blood -= 2;
+							}							
+							if(enemyArray[i].blood <= 0) {
+								$(".enemyMusic1")[0].play();
+								scoreNum += enemyArray[i].score;
+								enemyArray[i].die();
+								enemyArray.splice(enemyArray.indexOf(enemyArray[i]), 1);
+							}
+						}
+					}
+					//主机和敌人碰撞
+					if(Ykplane.x < (enemyX + enemyWidth) && Ykplane.y < (enemyY + enemyHeight) && (Ykplane.x + PLANEWIDTH - 2) > enemyX && (Ykplane.y + PLANEHEIGHT + 2) > enemyY) {
+						Ykplane.drawPlane(0);
+						setTimeout(function() {
+							clearInterval(mianControl);
+							gameOver();
+						}, 800);
+					}
+				}
+				score.drawScore(scoreNum);
+				bomb.drawBomb(bombNum);
+				//碰撞检测 补给
+				for(var i = 0; i < supplyArray.length; i++) {
+					var supplyX = supplyArray[i].x;
+					var supplyY = supplyArray[i].y;
+					if(Ykplane.x < (supplyX + supplyWidth) && Ykplane.y < (supplyY + supplyHeight) && (Ykplane.x + PLANEWIDTH) > supplyX && (Ykplane.y + PLANEHEIGHT) > supplyY) {
+						if(supplyArray[i].type == 1) {
+							bulletType = [2, bulletWidthTwo, bulletHeightTwo];
+							setTimeout(function() {
+								bulletType = [1, bulletWidthOne, bulletHeightOne];
+							}, 10000)
+						};
+						if(supplyArray[i].type == 0) {
+							bombNum++;
+						}
+						supplyArray.splice(supplyArray.indexOf(supplyArray[i]), 1);
+					}
+				}
+				var clickNum = 0;
+				//鼠标点击暂停图片
+				canvas.onclick = function(event) {
+					clickNum++;
+					var ev = event || window.event;
+					var clientX = ev.clientX - this.offsetLeft;
+					var clientY = ev.clientY - this.offsetTop;
+					if(clientX < 80 && clientY < 80) {
+						if(clickNum % 2 != 0) {
+							//暂停
+							clearInterval(mianControl);
+							$("#reS").show();
+						} else {
+							$("#reS").hide();
+							main();
+						}
+					}
+					//炸弹事件
+					if(clientX < 60 && clientY < canvas.height - 10) {
+						if(bombNum > 0) {
+							$(".enemyMusic1")[0].play();
+							bombNum--;
+							for(var i = 0; i < enemyArray.length; i++) {
+								enemyArray[i].die();
+							}
+							enemyArray.splice(0, enemyArray.length);
+						}
+					}
+				}
+				//飞机触屏移动
+				canvas.ontouchstart = function(event) {
+					var event = event || window.event;
+					if(event.preventDefault) {
+						event.preventDefault();
+					} else {
+						event.returnValue = false;
+					}
+					clickNum++;
+					var clientX = event.touches[0].clientX - this.offsetLeft;
+					var clientY = event.touches[0].clientY - this.offsetTop;
+					if(clientX < 80 && clientY < 80) {
+						if(clickNum % 2 != 0) {
+							//暂停
+							clearInterval(mianControl);
+							$("#reS").show();
+						} else {
+							$("#reS").hide();
+							main();
+						}
+					}
+					if(clientX < 60 && clientY < canvas.height - 10) {
+						if(bombNum > 0) {
+							bombNum--;
+							for(var i = 0; i < enemyArray.length; i++) {
+								enemyArray[i].die();
+							}
+							enemyArray.splice(0, enemyArray.length);
+						}
+					}					
+					var x = event.clientX;
+					var y = event.clientY;
+					canvas.ontouchmove = function(event) {
+						var event = event || window.event;
+						if(event.preventDefault) {
+							event.preventDefault();
+						} else {
+							event.returnValue = false;
+						}
+						Ykplane.x = event.touches[0].clientX - PLANEWIDTH / 2 - canvas.offsetLeft; 
+						Ykplane.y = event.touches[0].clientY - PLANEHEIGHT / 2 - canvas.offsetTop;
+					}
+				}
+			}, 10);
+		}
+		main();
+		//游戏结束
+		function gameOver() {
+			$("#box").show();
+			$("#score").html(scoreNum);
+			$(".loopMusic")[1].pause();
+			clearInterval(createBullet);
+		}
+		//游戏重新开始
+		$(".restart").on("click", function() {
+			document.location.reload();
+		})
+	</script>
+
+</html>
